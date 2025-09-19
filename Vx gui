@@ -4,24 +4,23 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local hrp = char:WaitForChild("HumanoidRootPart")
-local humanoid = char:WaitForChild("Humanoid")
 
--- ===== Helper =====
+-- ===== Helper functions =====
 local function refreshChar()
-    char = player.Character or player.CharacterAdded:Wait()
-    hrp = char:WaitForChild("HumanoidRootPart")
-    humanoid = char:WaitForChild("Humanoid")
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local humanoid = char:WaitForChild("Humanoid")
+    return char, hrp, humanoid
 end
-player.CharacterAdded:Connect(function() wait(0.2) refreshChar() end)
 
 -- ===== GUI =====
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-screenGui.Name = "HaGui"
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "HaGuiUltra"
+screenGui.Parent = player:WaitForChild("PlayerGui")
 screenGui.ResetOnSpawn = false
 
-local toggleBtn = Instance.new("TextButton", screenGui)
+-- Toggle Button
+local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0,140,0,30)
 toggleBtn.Position = UDim2.new(0.02,0,0.02,0)
 toggleBtn.Text = "Open HaGui"
@@ -29,22 +28,24 @@ toggleBtn.Font = Enum.Font.SourceSansBold
 toggleBtn.TextSize = 18
 toggleBtn.BackgroundColor3 = Color3.fromRGB(200,0,0)
 toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+toggleBtn.Parent = screenGui
 
-local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0,320,0,400)
+-- Main Frame
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0,340,0,420)
 frame.Position = UDim2.new(0.05,0,0.1,0)
-frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 frame.BorderSizePixel = 0
 frame.Visible = false
 frame.AnchorPoint = Vector2.new(0,0)
-frame.ZIndex = 2
+frame.Parent = screenGui
 
 -- Top bar
 local topBar = Instance.new("Frame", frame)
 topBar.Size = UDim2.new(1,0,0,30)
 topBar.BackgroundColor3 = Color3.fromRGB(255,0,0)
 local gradient = Instance.new("UIGradient", topBar)
-gradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255,50,50)), ColorSequenceKeypoint.new(1, Color3.fromRGB(200,0,0))})
+gradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255,80,80)), ColorSequenceKeypoint.new(1, Color3.fromRGB(200,0,0))})
 
 local title = Instance.new("TextLabel", topBar)
 title.Size = UDim2.new(1,0,1,0)
@@ -121,6 +122,7 @@ local moveVec=Vector3.new(0,0,0)
 local FLY_SPEED=120
 
 local function enableFly()
+    local char, hrp, _ = refreshChar()
     if not hrp then return end
     flyBV=Instance.new("BodyVelocity")
     flyBV.MaxForce=Vector3.new(1e5,1e5,1e5)
@@ -154,7 +156,8 @@ UserInputService.InputEnded:Connect(function(input,gp)
 end)
 
 RunService.RenderStepped:Connect(function()
-    if flyActive and flyBV and hrp then
+    if flyActive and flyBV then
+        local _, hrp, _ = refreshChar()
         local cam = workspace.CurrentCamera
         local dir = (cam.CFrame.LookVector*moveVec.Z + cam.CFrame.RightVector*moveVec.X + Vector3.new(0,1,0)*moveVec.Y)
         if dir.Magnitude>0 then
@@ -172,7 +175,7 @@ end)
 
 local noclipActive=false
 createButton("Noclip ON/OFF", function()
-    refreshChar()
+    local char, _, _ = refreshChar()
     for _,p in ipairs(char:GetDescendants()) do
         if p:IsA("BasePart") then p.CanCollide = not noclipActive end
     end
@@ -181,7 +184,7 @@ end)
 
 local speedActive=false
 createButton("Speed 100 ON/OFF", function()
-    refreshChar()
+    local _, _, humanoid = refreshChar()
     if humanoid then
         if speedActive then humanoid.WalkSpeed = 16 else humanoid.WalkSpeed = 100 end
         speedActive = not speedActive
@@ -233,6 +236,7 @@ end)
 
 -- ===== Teleport do losowego gracza =====
 createButton("Teleport to Random Player", function()
+    local _, hrp, _ = refreshChar()
     local others = {}
     for _,pl in ipairs(Players:GetPlayers()) do
         if pl ~= player and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") then
@@ -243,6 +247,10 @@ createButton("Teleport to Random Player", function()
         print("Brak graczy")
         return
     end
+    local target = others[math.random(1,#others)]
+    hrp.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
+    print("Tepnięto do: "..target.Name)
+end)    end
     local target = others[math.random(1,#others)]
     hrp.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
     print("Tepnięto do: "..target.Name)
