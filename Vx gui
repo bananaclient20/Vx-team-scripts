@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
 -- ===== Character helper =====
@@ -15,29 +16,55 @@ refreshChar()
 player.CharacterAdded:Connect(refreshChar)
 
 -- ===== GUI =====
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "SimpleHaGui"
-screenGui.Parent = player:WaitForChild("PlayerGui")
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "HaGuiUltra"
 
 -- Toggle Button
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0,140,0,30)
+local toggleBtn = Instance.new("TextButton", screenGui)
+toggleBtn.Size = UDim2.new(0,150,0,35)
 toggleBtn.Position = UDim2.new(0.02,0,0.02,0)
 toggleBtn.Text = "Open GUI"
-toggleBtn.Parent = screenGui
+toggleBtn.BackgroundColor3 = Color3.fromRGB(200,0,0)
+toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+toggleBtn.Font = Enum.Font.SourceSansBold
+toggleBtn.TextSize = 18
 
 -- Main Frame
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0,250,0,300)
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0,350,0,400)
 frame.Position = UDim2.new(0.1,0,0.1,0)
-frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.BorderColor3 = Color3.fromRGB(255,0,0)
+frame.BorderSizePixel = 2
 frame.Visible = false
-frame.Parent = screenGui
 
--- Movable
+-- Top bar
+local topBar = Instance.new("Frame", frame)
+topBar.Size = UDim2.new(1,0,0,35)
+topBar.BackgroundColor3 = Color3.fromRGB(200,0,0)
+
+local title = Instance.new("TextLabel", topBar)
+title.Size = UDim2.new(1,0,1,0)
+title.BackgroundTransparency = 1
+title.Text = "ha ha ha ha ha"
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 18
+title.TextColor3 = Color3.fromRGB(255,255,255)
+
+-- ScrollFrame
+local scroll = Instance.new("ScrollingFrame", frame)
+scroll.Size = UDim2.new(1,0,1,-35)
+scroll.Position = UDim2.new(0,0,0,35)
+scroll.BackgroundTransparency = 1
+scroll.ScrollBarThickness = 8
+local layout = Instance.new("UIListLayout", scroll)
+layout.Padding = UDim.new(0,5)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- ===== Movable GUI =====
 local dragging=false
 local dragInput, mousePos, framePos
-frame.InputBegan:Connect(function(input)
+topBar.InputBegan:Connect(function(input)
     if input.UserInputType==Enum.UserInputType.MouseButton1 then
         dragging=true
         mousePos=input.Position
@@ -47,13 +74,13 @@ frame.InputBegan:Connect(function(input)
         end)
     end
 end)
-frame.InputChanged:Connect(function(input)
+topBar.InputChanged:Connect(function(input)
     if input.UserInputType==Enum.UserInputType.MouseMovement then dragInput=input end
 end)
 UserInputService.InputChanged:Connect(function(input)
     if input==dragInput and dragging then
         local delta = input.Position - mousePos
-        frame.Position = UDim2.new(framePos.X.Scale, framePos.X.Offset+delta.X, framePos.Y.Scale, framePos.Y.Offset+delta.Y)
+        frame.Position = UDim2.new(framePos.X.Scale,framePos.X.Offset+delta.X, framePos.Y.Scale,framePos.Y.Offset+delta.Y)
     end
 end)
 
@@ -61,13 +88,22 @@ toggleBtn.MouseButton1Click:Connect(function()
     frame.Visible = not frame.Visible
 end)
 
--- ===== Buttons =====
+-- ===== Buttons helper =====
 local function createButton(name, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9,0,0,30)
-    btn.Position = UDim2.new(0.05,0,0,#frame:GetChildren()*0.1)
+    btn.Size = UDim2.new(0.95,0,0,35)
+    btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
     btn.Text = name
-    btn.Parent = frame
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 16
+    btn.Parent = scroll
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(120,0,0)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(50,50,50)}):Play()
+    end)
     btn.MouseButton1Click:Connect(callback)
 end
 
@@ -99,7 +135,6 @@ UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode==Enum.KeyCode.Space then moveVec=moveVec+Vector3.new(0,1,0) end
     if input.KeyCode==Enum.KeyCode.LeftShift then moveVec=moveVec+Vector3.new(0,-1,0) end
 end)
-
 UserInputService.InputEnded:Connect(function(input)
     if input.KeyCode==Enum.KeyCode.W then moveVec=moveVec-Vector3.new(0,0,-1) end
     if input.KeyCode==Enum.KeyCode.S then moveVec=moveVec-Vector3.new(0,0,1) end
@@ -142,7 +177,49 @@ createButton("Noclip ON/OFF", function()
     noclipActive = not noclipActive
 end)
 
--- ===== Teleport do losowego gracza =====
+-- ===== ESP =====
+local espActive=false
+local espFolder=Instance.new("Folder", workspace)
+espFolder.Name="HaESP"
+local function createESP(plr)
+    if not plr.Character then return end
+    local hrp2 = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character.PrimaryPart
+    if not hrp2 then return end
+    if hrp2:FindFirstChild("HaESPBillboard") then return end
+    local bb = Instance.new("BillboardGui", espFolder)
+    bb.Name = "HaESPBillboard"
+    bb.Adornee = hrp2
+    bb.Size = UDim2.new(0,100,0,40)
+    bb.StudsOffset = Vector3.new(0,2.5,0)
+    bb.AlwaysOnTop = true
+    local label = Instance.new("TextLabel", bb)
+    label.Size = UDim2.new(1,0,1,0)
+    label.BackgroundTransparency = 1
+    label.Text = plr.Name
+    label.TextScaled = true
+    label.Font = Enum.Font.SourceSansBold
+    label.TextColor3 = Color3.fromRGB(255,0,0)
+end
+local function clearESP()
+    for _,v in ipairs(espFolder:GetChildren()) do v:Destroy() end
+end
+createButton("ESP ON/OFF", function()
+    espActive = not espActive
+    if espActive then
+        for _,pl in ipairs(Players:GetPlayers()) do
+            if pl~=player then createESP(pl) end
+        end
+        Players.PlayerAdded:Connect(function(pl)
+            pl.CharacterAdded:Connect(function()
+                if espActive then createESP(pl) end
+            end)
+        end)
+    else
+        clearESP()
+    end
+end)
+
+-- ===== Teleport Ty -> Random Player =====
 createButton("Teleport to Random Player", function()
     local others={}
     for _,pl in ipairs(Players:GetPlayers()) do
