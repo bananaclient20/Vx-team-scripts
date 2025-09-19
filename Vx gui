@@ -1,11 +1,11 @@
 -- LocalScript w StarterGui
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
--- RemoteEvent do serwera (tworzy jeśli nie ma)
+-- RemoteEvent (tworzy jeśli nie ma)
 local RE_NAME = "HaGuiRemote"
 local remote = ReplicatedStorage:FindFirstChild(RE_NAME)
 if not remote then
