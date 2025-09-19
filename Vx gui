@@ -8,7 +8,7 @@ local char = player.Character or player.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
 local humanoid = char:WaitForChild("Humanoid")
 
--- ===== Helper functions =====
+-- ===== Helper =====
 local function refreshChar()
     char = player.Character or player.CharacterAdded:Wait()
     hrp = char:WaitForChild("HumanoidRootPart")
@@ -37,7 +37,9 @@ frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
 frame.BorderSizePixel = 0
 frame.Visible = false
 frame.AnchorPoint = Vector2.new(0,0)
+frame.ZIndex = 2
 
+-- Top bar
 local topBar = Instance.new("Frame", frame)
 topBar.Size = UDim2.new(1,0,0,30)
 topBar.BackgroundColor3 = Color3.fromRGB(255,0,0)
@@ -52,6 +54,7 @@ title.Font = Enum.Font.SourceSansBold
 title.TextSize = 18
 title.TextColor3 = Color3.fromRGB(255,255,255)
 
+-- ScrollFrame
 local scroll = Instance.new("ScrollingFrame", frame)
 scroll.Size = UDim2.new(1,0,1,-40)
 scroll.Position = UDim2.new(0,0,0,30)
@@ -88,7 +91,7 @@ toggleBtn.MouseButton1Click:Connect(function()
     frame.Visible = not frame.Visible
 end)
 
--- ===== Przyciski helper =====
+-- ===== Button helper =====
 local function createButton(name, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0.95,0,0,36)
@@ -162,7 +165,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ===== Działające przyciski =====
+-- ===== Buttons =====
 createButton("Fly ON/OFF", function()
     if flyActive then disableFly() else enableFly() end
 end)
@@ -228,20 +231,8 @@ createButton("ESP ON/OFF", function()
     end
 end)
 
--- ===== Home i teleport =====
-local homePos=nil
-createButton("Set Home", function()
-    if hrp then
-        homePos = hrp.Position
-        print("Home ustawione!")
-    end
-end)
-
-createButton("Teleport Random -> Home", function()
-    if not homePos then
-        print("Nie ustawiono Home!")
-        return
-    end
+-- ===== Teleport do losowego gracza =====
+createButton("Teleport to Random Player", function()
     local others = {}
     for _,pl in ipairs(Players:GetPlayers()) do
         if pl ~= player and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") then
@@ -249,10 +240,10 @@ createButton("Teleport Random -> Home", function()
         end
     end
     if #others == 0 then
-        print("Brak graczy do teleportu")
+        print("Brak graczy")
         return
     end
     local target = others[math.random(1,#others)]
-    target.Character.HumanoidRootPart.CFrame = CFrame.new(homePos + Vector3.new(0,3,0))
-    print("Teleported "..target.Name.." to Home!")
+    hrp.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
+    print("Tepnięto do: "..target.Name)
 end)
