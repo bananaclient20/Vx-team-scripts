@@ -1,4 +1,4 @@
--- LocalScript do StarterGui
+-- LocalScript (do exploitów typu Synapse/Fluxus)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -62,7 +62,6 @@ local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0,5)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Update CanvasSize automatically
 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y)
 end)
@@ -104,7 +103,6 @@ local function createButton(name, callback)
     btn.Font = Enum.Font.SourceSansBold
     btn.TextSize = 16
     btn.Parent = scroll
-    -- Hover effect
     btn.MouseEnter:Connect(function()
         TweenService:Create(btn,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(120,0,0)}):Play()
     end)
@@ -163,6 +161,17 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- ===== Infinite Jump =====
+local infJump=false
+createButton("Inf Jump ON/OFF", function()
+    infJump = not infJump
+end)
+UserInputService.JumpRequest:Connect(function()
+    if infJump then
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
 -- ===== Speed =====
 local speedActive=false
 createButton("Speed 100 ON/OFF", function()
@@ -178,10 +187,14 @@ end)
 -- ===== Noclip =====
 local noclipActive=false
 createButton("Noclip ON/OFF", function()
-    for _,p in ipairs(char:GetDescendants()) do
-        if p:IsA("BasePart") then p.CanCollide = noclipActive end
-    end
     noclipActive = not noclipActive
+end)
+RunService.Stepped:Connect(function()
+    if noclipActive then
+        for _,p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = false end
+        end
+    end
 end)
 
 -- ===== ESP =====
