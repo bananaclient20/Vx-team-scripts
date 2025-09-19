@@ -1,35 +1,27 @@
 -- LocalScript w StarterGui
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+local humanoid = char:WaitForChild("Humanoid")
 
--- Tworzymy RemoteEvent jeśli nie istnieje
-local RE_NAME = "HaGuiRemote"
-local remote = ReplicatedStorage:FindFirstChild(RE_NAME)
-if not remote then
-    remote = Instance.new("RemoteEvent")
-    remote.Name = RE_NAME
-    remote.Parent = ReplicatedStorage
+-- ===== Helper functions =====
+local function refreshChar()
+    char = player.Character or player.CharacterAdded:Wait()
+    hrp = char:WaitForChild("HumanoidRootPart")
+    humanoid = char:WaitForChild("Humanoid")
 end
-
--- Obsługa eventów z serwera
-remote.OnClientEvent:Connect(function(ctx, extra)
-    if ctx=="NoTargets" then print("Brak innych graczy do teleportu") end
-    if ctx=="TargetInvalid" then print("Wybrany gracz nie ma characteru") end
-    if ctx=="NoHome" then print("Nie ustawiono Home") end
-    if ctx=="Teleported" then print("Teleportowano gracza: "..tostring(extra)) end
-end)
+player.CharacterAdded:Connect(function() wait(0.2) refreshChar() end)
 
 -- ===== GUI =====
-local screenGui = Instance.new("ScreenGui")
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 screenGui.Name = "HaGui"
-screenGui.Parent = player:WaitForChild("PlayerGui")
 screenGui.ResetOnSpawn = false
 
--- przycisk otwierania GUI
-local toggleBtn = Instance.new("TextButton")
+local toggleBtn = Instance.new("TextButton", screenGui)
 toggleBtn.Size = UDim2.new(0,140,0,30)
 toggleBtn.Position = UDim2.new(0.02,0,0.02,0)
 toggleBtn.Text = "Open HaGui"
@@ -37,61 +29,39 @@ toggleBtn.Font = Enum.Font.SourceSansBold
 toggleBtn.TextSize = 18
 toggleBtn.BackgroundColor3 = Color3.fromRGB(200,0,0)
 toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
-toggleBtn.Parent = screenGui
 
--- główna ramka
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0,300,0,400)
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0,320,0,400)
 frame.Position = UDim2.new(0.05,0,0.1,0)
-frame.BackgroundColor3 = Color3.fromRGB(15,15,15)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
 frame.BorderSizePixel = 0
 frame.Visible = false
-frame.Parent = screenGui
+frame.AnchorPoint = Vector2.new(0,0)
 
--- top bar
-local topBar = Instance.new("Frame")
+local topBar = Instance.new("Frame", frame)
 topBar.Size = UDim2.new(1,0,0,30)
-topBar.BackgroundColor3 = Color3.fromRGB(200,0,0)
-topBar.BorderSizePixel = 0
-topBar.Parent = frame
+topBar.BackgroundColor3 = Color3.fromRGB(255,0,0)
+local gradient = Instance.new("UIGradient", topBar)
+gradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255,50,50)), ColorSequenceKeypoint.new(1, Color3.fromRGB(200,0,0))})
 
-local title = Instance.new("TextLabel")
+local title = Instance.new("TextLabel", topBar)
 title.Size = UDim2.new(1,0,1,0)
 title.BackgroundTransparency = 1
 title.Text = "ha ha ha ha ha"
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 18
 title.TextColor3 = Color3.fromRGB(255,255,255)
-title.Parent = topBar
 
--- ScrollFrame na przyciski
-local scroll = Instance.new("ScrollingFrame")
+local scroll = Instance.new("ScrollingFrame", frame)
 scroll.Size = UDim2.new(1,0,1,-40)
 scroll.Position = UDim2.new(0,0,0,30)
 scroll.CanvasSize = UDim2.new(0,0,0,0)
 scroll.ScrollBarThickness = 8
 scroll.BackgroundTransparency = 1
-scroll.Parent = frame
+local layout = Instance.new("UIListLayout", scroll)
+layout.Padding = UDim.new(0,6)
 
-local uiList = Instance.new("UIListLayout")
-uiList.Padding = UDim.new(0,6)
-uiList.Parent = scroll
-
--- helper do tworzenia przycisków
-local function createButton(text, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.95,0,0,36)
-    btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    btn.BorderSizePixel = 0
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.Font = Enum.Font.SourceSans
-    btn.TextSize = 18
-    btn.Parent = scroll
-    btn.MouseButton1Click:Connect(callback)
-end
-
--- ===== Movable =====
+-- ===== Movable GUI =====
 local dragging=false
 local dragInput, mousePos, framePos
 topBar.InputBegan:Connect(function(input)
@@ -114,28 +84,38 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- toggle GUI
 toggleBtn.MouseButton1Click:Connect(function()
     frame.Visible = not frame.Visible
 end)
 
--- ===== Character =====
-local char = player.Character or player.CharacterAdded:Wait()
-local humanoid = char:FindFirstChildOfClass("Humanoid")
-local hrp = char:FindFirstChild("HumanoidRootPart")
-
-local function refreshChar()
-    char = player.Character or player.CharacterAdded:Wait()
-    humanoid = char:FindFirstChildOfClass("Humanoid")
-    hrp = char:FindFirstChild("HumanoidRootPart")
+-- ===== Przyciski helper =====
+local function createButton(name, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.95,0,0,36)
+    btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    btn.BorderSizePixel = 0
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 18
+    btn.Parent = scroll
+    local grad = Instance.new("UIGradient", btn)
+    grad.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(80,0,0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(150,0,0))})
+    grad.Rotation = 45
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(120,0,0)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(50,50,50)}):Play()
+    end)
+    btn.MouseButton1Click:Connect(callback)
 end
-player.CharacterAdded:Connect(function() wait(0.2) refreshChar() end)
 
 -- ===== Fly =====
 local flyActive=false
 local flyBV=nil
-local FLY_SPEED=120
 local moveVec=Vector3.new(0,0,0)
+local FLY_SPEED=120
 
 local function enableFly()
     if not hrp then return end
@@ -172,81 +152,107 @@ end)
 
 RunService.RenderStepped:Connect(function()
     if flyActive and flyBV and hrp then
-        local cam=workspace.CurrentCamera
-        local dir=(cam.CFrame.LookVector*moveVec.Z + cam.CFrame.RightVector*moveVec.X + Vector3.new(0,1,0)*moveVec.Y)
-        if dir.Magnitude>0 then flyBV.Velocity=dir.Unit*FLY_SPEED else flyBV.Velocity=Vector3.new(0,0,0) end
+        local cam = workspace.CurrentCamera
+        local dir = (cam.CFrame.LookVector*moveVec.Z + cam.CFrame.RightVector*moveVec.X + Vector3.new(0,1,0)*moveVec.Y)
+        if dir.Magnitude>0 then
+            flyBV.Velocity = dir.Unit*FLY_SPEED
+        else
+            flyBV.Velocity = Vector3.new(0,0,0)
+        end
     end
 end)
 
--- ===== Przyciski =====
--- Fly
+-- ===== Działające przyciski =====
 createButton("Fly ON/OFF", function()
-    refreshChar()
     if flyActive then disableFly() else enableFly() end
 end)
 
--- Noclip
 local noclipActive=false
 createButton("Noclip ON/OFF", function()
     refreshChar()
     for _,p in ipairs(char:GetDescendants()) do
-        if p:IsA("BasePart") then p.CanCollide=not noclipActive end
+        if p:IsA("BasePart") then p.CanCollide = not noclipActive end
     end
-    noclipActive=not noclipActive
+    noclipActive = not noclipActive
 end)
 
--- Speed
 local speedActive=false
 createButton("Speed 100 ON/OFF", function()
     refreshChar()
     if humanoid then
-        if speedActive then humanoid.WalkSpeed=16 else humanoid.WalkSpeed=100 end
-        speedActive=not speedActive
+        if speedActive then humanoid.WalkSpeed = 16 else humanoid.WalkSpeed = 100 end
+        speedActive = not speedActive
     end
 end)
 
 -- ESP
 local espActive=false
-local espFolder=Instance.new("Folder",workspace)
+local espFolder=Instance.new("Folder", workspace)
 espFolder.Name="HaESP"
 local function createESP(plr)
     if not plr.Character then return end
-    local hrp2=plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character.PrimaryPart
+    local hrp2 = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character.PrimaryPart
     if not hrp2 then return end
     if hrp2:FindFirstChild("HaESPBillboard") then return end
-    local bb=Instance.new("BillboardGui")
-    bb.Name="HaESPBillboard"
-    bb.Adornee=hrp2
-    bb.Size=UDim2.new(0,100,0,40)
-    bb.StudsOffset=Vector3.new(0,2.5,0)
-    bb.AlwaysOnTop=true
-    bb.Parent=espFolder
-    local label=Instance.new("TextLabel")
-    label.Size=UDim2.new(1,0,1,0)
-    label.BackgroundTransparency=1
-    label.Text=plr.Name
-    label.TextScaled=true
-    label.Font=Enum.Font.SourceSansBold
-    label.TextColor3=Color3.new(1,0,0)
-    label.Parent=bb
+    local bb = Instance.new("BillboardGui")
+    bb.Name = "HaESPBillboard"
+    bb.Adornee = hrp2
+    bb.Size = UDim2.new(0,100,0,40)
+    bb.StudsOffset = Vector3.new(0,2.5,0)
+    bb.AlwaysOnTop = true
+    bb.Parent = espFolder
+    local label = Instance.new("TextLabel", bb)
+    label.Size = UDim2.new(1,0,1,0)
+    label.BackgroundTransparency = 1
+    label.Text = plr.Name
+    label.TextScaled = true
+    label.Font = Enum.Font.SourceSansBold
+    label.TextColor3 = Color3.new(1,0,0)
 end
-local function clearESP() for _,v in ipairs(espFolder:GetChildren()) do v:Destroy() end end
+local function clearESP()
+    for _,v in ipairs(espFolder:GetChildren()) do v:Destroy() end
+end
 createButton("ESP ON/OFF", function()
-    espActive=not espActive
+    espActive = not espActive
     if espActive then
-        for _,pl in ipairs(Players:GetPlayers()) do if pl~=player then createESP(pl) end end
+        for _,pl in ipairs(Players:GetPlayers()) do
+            if pl ~= player then createESP(pl) end
+        end
         Players.PlayerAdded:Connect(function(pl)
-            pl.CharacterAdded:Connect(function() if espActive then createESP(pl) end end)
+            pl.CharacterAdded:Connect(function()
+                if espActive then createESP(pl) end
+            end)
         end)
-    else clearESP() end
+    else
+        clearESP()
+    end
 end)
 
--- Set Home
+-- ===== Home i teleport =====
+local homePos=nil
 createButton("Set Home", function()
-    remote:FireServer("SetHome")
+    if hrp then
+        homePos = hrp.Position
+        print("Home ustawione!")
+    end
 end)
 
--- Teleport random player do Home
-createButton("Teleport random -> Home", function()
-    remote:FireServer("TeleportRandomToHome")
+createButton("Teleport Random -> Home", function()
+    if not homePos then
+        print("Nie ustawiono Home!")
+        return
+    end
+    local others = {}
+    for _,pl in ipairs(Players:GetPlayers()) do
+        if pl ~= player and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") then
+            table.insert(others, pl)
+        end
+    end
+    if #others == 0 then
+        print("Brak graczy do teleportu")
+        return
+    end
+    local target = others[math.random(1,#others)]
+    target.Character.HumanoidRootPart.CFrame = CFrame.new(homePos + Vector3.new(0,3,0))
+    print("Teleported "..target.Name.." to Home!")
 end)
