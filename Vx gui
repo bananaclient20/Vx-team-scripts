@@ -5,7 +5,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
--- RemoteEvent (tworzy jeśli nie ma)
+-- Tworzymy RemoteEvent jeśli nie istnieje
 local RE_NAME = "HaGuiRemote"
 local remote = ReplicatedStorage:FindFirstChild(RE_NAME)
 if not remote then
@@ -30,7 +30,7 @@ screenGui.ResetOnSpawn = false
 
 -- przycisk otwierania GUI
 local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0,120,0,30)
+toggleBtn.Size = UDim2.new(0,140,0,30)
 toggleBtn.Position = UDim2.new(0.02,0,0.02,0)
 toggleBtn.Text = "Open HaGui"
 toggleBtn.Font = Enum.Font.SourceSansBold
@@ -68,7 +68,7 @@ title.Parent = topBar
 local scroll = Instance.new("ScrollingFrame")
 scroll.Size = UDim2.new(1,0,1,-40)
 scroll.Position = UDim2.new(0,0,0,30)
-scroll.CanvasSize = UDim2.new(0,0,2,0)
+scroll.CanvasSize = UDim2.new(0,0,0,0)
 scroll.ScrollBarThickness = 8
 scroll.BackgroundTransparency = 1
 scroll.Parent = frame
@@ -80,7 +80,7 @@ uiList.Parent = scroll
 -- helper do tworzenia przycisków
 local function createButton(text, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9,0,0,36)
+    btn.Size = UDim2.new(0.95,0,0,36)
     btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
     btn.BorderSizePixel = 0
     btn.Text = text
@@ -119,7 +119,7 @@ toggleBtn.MouseButton1Click:Connect(function()
     frame.Visible = not frame.Visible
 end)
 
--- ===== Postać =====
+-- ===== Character =====
 local char = player.Character or player.CharacterAdded:Wait()
 local humanoid = char:FindFirstChildOfClass("Humanoid")
 local hrp = char:FindFirstChild("HumanoidRootPart")
