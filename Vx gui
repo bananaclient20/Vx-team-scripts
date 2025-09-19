@@ -1,4 +1,4 @@
--- LocalScript w StarterGui
+-- LocalScript do StarterGui
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -33,10 +33,11 @@ toggleBtn.TextSize = 18
 local frame = Instance.new("Frame", screenGui)
 frame.Size = UDim2.new(0,350,0,400)
 frame.Position = UDim2.new(0.1,0,0.1,0)
-frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
 frame.BorderColor3 = Color3.fromRGB(255,0,0)
 frame.BorderSizePixel = 2
 frame.Visible = false
+frame.ClipsDescendants = true
 
 -- Top bar
 local topBar = Instance.new("Frame", frame)
@@ -60,6 +61,11 @@ scroll.ScrollBarThickness = 8
 local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0,5)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Update CanvasSize automatically
+layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y)
+end)
 
 -- ===== Movable GUI =====
 local dragging=false
@@ -98,6 +104,7 @@ local function createButton(name, callback)
     btn.Font = Enum.Font.SourceSansBold
     btn.TextSize = 16
     btn.Parent = scroll
+    -- Hover effect
     btn.MouseEnter:Connect(function()
         TweenService:Create(btn,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(120,0,0)}):Play()
     end)
