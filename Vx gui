@@ -1,84 +1,227 @@
 -- LocalScript w StarterGui
-local player = game.Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
 
--- Tworzymy GUI
+-- RemoteEvent (tworzy jeśli nie istnieje)
+local RE_NAME = "HaGuiRemote"
+local remote = ReplicatedStorage:FindFirstChild(RE_NAME)
+if not remote then
+    remote = Instance.new("RemoteEvent")
+    remote.Name = RE_NAME
+    remote.Parent = ReplicatedStorage
+end
+
+-- Obsługa wiadomości od serwera
+remote.OnClientEvent:Connect(function(ctx, extra)
+    if ctx == "NoTargets" then print("Brak innych graczy do teleportu") end
+    if ctx == "TargetInvalid" then print("Wybrany gracz nie ma characteru") end
+    if ctx == "NoHome" then print("Nie ustawiono Home") end
+    if ctx == "Teleported" then print("Teleportowano gracza: "..tostring(extra)) end
+end)
+
+-- ====== GUI ======
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "HaGui"
 screenGui.Parent = player:WaitForChild("PlayerGui")
+screenGui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 220, 0, 300)
-frame.Position = UDim2.new(0.5, -110, 0.5, -150)
-frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
-frame.BorderColor3 = Color3.fromRGB(255,0,0)
-frame.BorderSizePixel = 3
+frame.Size = UDim2.new(0, 260, 0, 340)
+frame.Position = UDim2.new(0.02,0,0.1,0)
+frame.BackgroundColor3 = Color3.fromRGB(15,15,15)
+frame.BorderSizePixel = 0
 frame.Parent = screenGui
 
--- Tytuł
-local title = Instance.new("TextLabel")
-title.Text = "ha ha ha ha ha"
-title.Size = UDim2.new(1,0,0,30)
-title.BackgroundColor3 = Color3.fromRGB(0,0,0)
-title.TextColor3 = Color3.fromRGB(255,0,0)
-title.Font = Enum.Font.SourceSansBold
-title.TextSize = 20
-title.Parent = frame
+-- Movable
+local dragging, dragInput, mousePos, framePos = false, nil, nil, nil
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        mousePos = input.Position
+        framePos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging=false end
+        end)
+    end
+end)
+frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput=input end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - mousePos
+        frame.Position = UDim2.new(framePos.X.Scale, framePos.X.Offset+delta.X, framePos.Y.Scale, framePos.Y.Offset+delta.Y)
+    end
+end)
 
--- Funkcja tworząca przycisk
-local function makeButton(text, order, callback)
+-- Czerwona obwódka i top bar
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1,0,0,30)
+topBar.Position = UDim2.new(0,0,0,0)
+topBar.BackgroundColor3 = Color3.fromRGB(200,0,0)
+topBar.BorderSizePixel = 0
+topBar.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,1,0)
+title.BackgroundTransparency = 1
+title.Text = "ha ha ha ha ha"
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 18
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.Parent = topBar
+
+-- Helper do przycisków
+local function createButton(text, y)
     local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9,0,0,36)
+    btn.Position = UDim2.new(0.05,0,0,y)
+    btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    btn.BorderSizePixel = 0
     btn.Text = text
-    btn.Size = UDim2.new(1, -10, 0, 30)
-    btn.Position = UDim2.new(0,5,0,35 + (order-1)*35)
-    btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    btn.TextColor3 = Color3.fromRGB(255,0,0)
-    btn.Font = Enum.Font.SourceSansBold
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Font = Enum.Font.SourceSans
     btn.TextSize = 18
     btn.Parent = frame
-    btn.MouseButton1Click:Connect(callback)
+    return btn
 end
 
--- Speed (przykład: ustawia Humanoid.WalkSpeed)
-makeButton("Speed x3", 1, function()
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.WalkSpeed = 48 -- normalnie 16
+local y=40
+local btnFly = createButton("Fly ON/OFF",y); y=y+44
+local btnNoclip = createButton("Noclip ON/OFF",y); y=y+44
+local btnSpeed = createButton("Speed 100 ON/OFF",y); y=y+44
+local btnESP = createButton("ESP ON/OFF",y); y=y+44
+local btnSetHome = createButton("Set Home",y); y=y+44
+local btnTeleport = createButton("Teleport random -> Home",y); y=y+44
+
+-- ====== Funkcje ======
+local char = player.Character or player.CharacterAdded:Wait()
+local humanoid = char:FindFirstChildOfClass("Humanoid")
+local hrp = char:FindFirstChild("HumanoidRootPart")
+
+local function refreshChar()
+    char = player.Character or player.CharacterAdded:Wait()
+    humanoid = char:FindFirstChildOfClass("Humanoid")
+    hrp = char:FindFirstChild("HumanoidRootPart")
+end
+player.CharacterAdded:Connect(function() wait(0.2) refreshChar() end)
+
+-- Fly
+local flyActive=false
+local flyBV=nil
+local FLY_SPEED=120
+local moveVec=Vector3.new(0,0,0)
+
+local function enableFly()
+    if not hrp then return end
+    flyBV = Instance.new("BodyVelocity")
+    flyBV.MaxForce = Vector3.new(1e5,1e5,1e5)
+    flyBV.Velocity = Vector3.new(0,0,0)
+    flyBV.Parent = hrp
+    flyActive=true
+end
+local function disableFly()
+    if flyBV then flyBV:Destroy() end
+    flyBV=nil
+    flyActive=false
+end
+
+UserInputService.InputBegan:Connect(function(input,gp)
+    if gp then return end
+    if input.KeyCode==Enum.KeyCode.W then moveVec=moveVec+Vector3.new(0,0,-1) end
+    if input.KeyCode==Enum.KeyCode.S then moveVec=moveVec+Vector3.new(0,0,1) end
+    if input.KeyCode==Enum.KeyCode.A then moveVec=moveVec+Vector3.new(-1,0,0) end
+    if input.KeyCode==Enum.KeyCode.D then moveVec=moveVec+Vector3.new(1,0,0) end
+    if input.KeyCode==Enum.KeyCode.Space then moveVec=moveVec+Vector3.new(0,1,0) end
+    if input.KeyCode==Enum.KeyCode.LeftShift then moveVec=moveVec+Vector3.new(0,-1,0) end
+end)
+UserInputService.InputEnded:Connect(function(input,gp)
+    if gp then return end
+    if input.KeyCode==Enum.KeyCode.W then moveVec=moveVec-Vector3.new(0,0,-1) end
+    if input.KeyCode==Enum.KeyCode.S then moveVec=moveVec-Vector3.new(0,0,1) end
+    if input.KeyCode==Enum.KeyCode.A then moveVec=moveVec-Vector3.new(-1,0,0) end
+    if input.KeyCode==Enum.KeyCode.D then moveVec=moveVec-Vector3.new(1,0,0) end
+    if input.KeyCode==Enum.KeyCode.Space then moveVec=moveVec-Vector3.new(0,1,0) end
+    if input.KeyCode==Enum.KeyCode.LeftShift then moveVec=moveVec-Vector3.new(0,-1,0) end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if flyActive and flyBV and hrp then
+        local cam=workspace.CurrentCamera
+        local dir=(cam.CFrame.LookVector*moveVec.Z + cam.CFrame.RightVector*moveVec.X + Vector3.new(0,1,0)*moveVec.Y)
+        if dir.Magnitude>0 then flyBV.Velocity=dir.Unit*FLY_SPEED else flyBV.Velocity=Vector3.new(0,0,0) end
     end
 end)
 
--- Noclip (przechodzenie przez ściany)
-local noclipEnabled = false
-makeButton("Noclip", 2, function()
-    noclipEnabled = not noclipEnabled
+btnFly.MouseButton1Click:Connect(function()
+    refreshChar()
+    if flyActive then disableFly() else enableFly() end
 end)
 
-game:GetService("RunService").Stepped:Connect(function()
-    if noclipEnabled and char then
-        for _, part in pairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
+-- Noclip
+local noclipActive=false
+local function setNoclip(state)
+    refreshChar()
+    for _,p in ipairs(char:GetDescendants()) do
+        if p:IsA("BasePart") then p.CanCollide=not state end
+    end
+    noclipActive=state
+end
+btnNoclip.MouseButton1Click:Connect(function() setNoclip(not noclipActive) end)
+
+-- Speed
+local speedActive=false
+local defaultSpeed=16
+btnSpeed.MouseButton1Click:Connect(function()
+    refreshChar()
+    if humanoid then
+        if speedActive then humanoid.WalkSpeed=defaultSpeed else humanoid.WalkSpeed=100 end
+        speedActive=not speedActive
     end
 end)
 
--- Fly (prosta wersja: zmienia HipHeight)
-makeButton("Fly", 3, function()
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.HipHeight = hum.HipHeight + 20
-    end
-end)
+-- ESP
+local espActive=false
+local espFolder=Instance.new("Folder",workspace)
+espFolder.Name="HaESP"
+local function createESP(plr)
+    if not plr.Character then return end
+    local hrp2=plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character.PrimaryPart
+    if not hrp2 then return end
+    if hrp2:FindFirstChild("HaESPBillboard") then return end
+    local bb=Instance.new("BillboardGui")
+    bb.Name="HaESPBillboard"
+    bb.Adornee=hrp2
+    bb.Size=UDim2.new(0,100,0,40)
+    bb.StudsOffset=Vector3.new(0,2.5,0)
+    bb.AlwaysOnTop=true
+    bb.Parent=espFolder
+    local label=Instance.new("TextLabel")
+    label.Size=UDim2.new(1,0,1,0)
+    label.BackgroundTransparency=1
+    label.Text=plr.Name
+    label.TextScaled=true
+    label.Font=Enum.Font.SourceSansBold
+    label.TextColor3=Color3.new(1,0,0)
+    label.Parent=bb
+end
+local function clearESP() for _,v in ipairs(espFolder:GetChildren()) do v:Destroy() end end
+local function toggleESP()
+    espActive=not espActive
+    if espActive then
+        for _,pl in ipairs(Players:GetPlayers()) do if pl~=player then createESP(pl) end end
+        Players.PlayerAdded:Connect(function(pl)
+            pl.CharacterAdded:Connect(function() if espActive then createESP(pl) end end)
+        end)
+    else clearESP() end
+end
+btnESP.MouseButton1Click:Connect(toggleESP)
 
--- Random TP do innego gracza
-makeButton("Random TP", 4, function()
-    local players = game.Players:GetPlayers()
-    if #players > 1 then
-        local randomPlayer = players[math.random(1, #players)]
-        if randomPlayer ~= player and randomPlayer.Character and randomPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = char:WaitForChild("HumanoidRootPart")
-            hrp.CFrame = randomPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(2,0,0)
-        end
-    end
-end)
+-- Set Home
+btnSetHome.MouseButton1Click:Connect(function() remote:FireServer("SetHome") end)
+
+-- Teleport random
+btnTeleport.MouseButton1Click:Connect(function() remote:FireServer("TeleportRandomToHome") end)
